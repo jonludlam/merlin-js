@@ -3,6 +3,98 @@ open Std
 open Merlin_kernel
 module Location = Ocaml_parsing.Location
 
+let sync_get url =
+  let open Js_of_ocaml in
+  let x = XmlHttpRequest.create () in
+  x##.responseType := Js.string "arraybuffer";
+  x##_open (Js.string "GET") (Js.string url) Js._false;
+  x##send Js.null;
+  match x##.status with
+  | 200 ->
+      Js.Opt.case
+        (File.CoerceTo.arrayBuffer x##.response)
+        (fun () ->
+          Firebug.console##log (Js.string "Failed to receive file");
+          None)
+        (fun b -> Some (Typed_array.String.of_arrayBuffer b))
+  | _ -> None
+
+let optbind : 'a option -> ('a -> 'b option) -> 'b option = fun x fn -> match x with | None -> None | Some a -> fn a 
+
+type signature = Ocaml_typing.Types.signature_item list
+type flags = Ocaml_typing.Cmi_format.pers_flags list
+type header = string * signature
+type crcs = (string * Digest.t option) list 
+
+(** The following two functions are taken from cmi_format.ml in
+    the compiler, but changed to work on bytes rather than input
+    channels *)
+let input_cmi str =
+  let offset = 0 in
+  let (name, sign) = (Marshal.from_bytes str offset : header) in
+  let offset = offset + Marshal.total_size str offset in
+  let crcs = (Marshal.from_bytes str offset : crcs) in
+  let offset = offset + Marshal.total_size str offset in
+  let flags = (Marshal.from_bytes str offset : flags) in
+  {
+    Ocaml_typing.Cmi_format.cmi_name = name;
+    cmi_sign = sign;
+    cmi_crcs = crcs;
+    cmi_flags = flags;
+  }
+
+let read_cmi filename str =
+  let magic = Ocaml_utils.Config.cmi_magic_number in
+  let magic_len = String.length magic in
+  let buffer = Bytes.sub str 0 magic_len in
+  (if buffer <> Bytes.of_string magic then
+   let pre_len = String.length magic - 3 in
+   if
+     Bytes.sub buffer 0 pre_len
+     = Bytes.of_string @@ String.sub magic ~pos:0 ~len:pre_len
+   then
+     let msg =
+       if buffer < Bytes.of_string magic then "an older"
+       else "a newer"
+     in
+     raise (Ocaml_typing.Magic_numbers.Cmi.Error (Wrong_version_interface (filename, msg)))
+   else raise (Ocaml_typing.Magic_numbers.Cmi.Error (Not_an_interface filename)));
+  input_cmi (Bytes.sub str magic_len (Bytes.length str - magic_len))
+
+let init cmi_urls =
+  let cmi_files =
+    List.map
+      ~f:(fun cmi -> (Filename.basename cmi |> Filename.chop_extension, cmi))
+      cmi_urls
+  in
+  let open Ocaml_typing.Persistent_env.Persistent_signature in
+  let old_loader = !load in
+  let new_load ~unit_name =
+    let result =
+      optbind
+        (List.assoc_opt (String.uncapitalize_ascii unit_name) cmi_files)
+            sync_get
+        in
+        match result with
+        | Some x ->
+            Some
+              {
+                filename =
+                  Sys.executable_name;
+                cmi = read_cmi unit_name (Bytes.of_string x);
+              }
+        | _ -> old_loader ~unit_name
+  in
+  load := new_load
+
+let init { Protocol.static_cmis; cmi_urls } =
+  List.iter static_cmis ~f:(fun ( path, content) ->
+    let name = Filename.(concat "/static/stdlib" (basename path)) in
+    Js_of_ocaml.Sys_js.create_file ~name ~content);
+  init cmi_urls;
+  Protocol.Initialized
+
+
 let config =
   let initial = Mconfig.initial in
   { initial with
@@ -174,16 +266,12 @@ let on_message marshaled_message =
           })
         in
         Protocol.Errors errors
+    | Init_cmis cmis ->
+	init cmis	
   in
   let res = Marshal.to_bytes res [] in
   Js_of_ocaml.Worker.post_message res
 
 
 let run () =
-  (* Load the CMIs into the pseudo file-system *)
-  (* This add roughly 3mo to the final script. These could be loaded dynamically
-  after the worker *)
-  List.iter Static_files.stdlib_cmis ~f:(fun ( path, content) ->
-    let name = Filename.(concat "/static/stdlib" (basename path)) in
-    Js_of_ocaml.Sys_js.create_file ~name ~content);
   Js_of_ocaml.Worker.set_onmessage on_message

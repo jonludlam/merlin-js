@@ -66,3 +66,13 @@ let query_type worker (source : string) position =
   match data with
   | Protocol.Typed_enclosings l -> l
   | _ -> assert false
+
+let init worker cmis =
+  let open Fut.Syntax in
+  let action = Protocol.Init_cmis cmis in
+  let+ data : Protocol.answer = query ~action worker in
+  Console.(log ["Received response from initialization:";  data]);
+  match data with
+  | Protocol.Initialized -> ()
+  | _ -> assert false
+  
