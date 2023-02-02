@@ -19,8 +19,6 @@ let sync_get url =
         (fun b -> Some (Typed_array.String.of_arrayBuffer b))
   | _ -> None
 
-let optbind : 'a option -> ('a -> 'b option) -> 'b option = fun x fn -> match x with | None -> None | Some a -> fn a 
-
 type signature = Ocaml_typing.Types.signature_item list
 type flags = Ocaml_typing.Cmi_format.pers_flags list
 type header = string * signature
@@ -61,6 +59,17 @@ let read_cmi filename str =
    else raise (Ocaml_typing.Magic_numbers.Cmi.Error (Not_an_interface filename)));
   input_cmi (Bytes.sub str magic_len (Bytes.length str - magic_len))
 
+let memoize f =
+  let memo = Hashtbl.create 10 in
+  fun x ->
+    let open Js_of_ocaml in
+    match Hashtbl.find_opt memo x with
+    | Some x -> x
+    | None ->
+      let result = f x in
+      Hashtbl.replace memo x result;
+      result
+
 let init cmi_urls =
   let cmi_files =
     List.map
@@ -69,21 +78,19 @@ let init cmi_urls =
   in
   let open Ocaml_typing.Persistent_env.Persistent_signature in
   let old_loader = !load in
+  let fetch = memoize
+    (fun unit_name ->
+      let open Option.Infix in 
+      List.assoc_opt (String.uncapitalize_ascii unit_name) cmi_files >>= sync_get >>| Bytes.of_string)
+  in
   let new_load ~unit_name =
-    let result =
-      optbind
-        (List.assoc_opt (String.uncapitalize_ascii unit_name) cmi_files)
-            sync_get
-        in
-        match result with
-        | Some x ->
-            Some
-              {
-                filename =
-                  Sys.executable_name;
-                cmi = read_cmi unit_name (Bytes.of_string x);
-              }
-        | _ -> old_loader ~unit_name
+    match fetch unit_name with
+    | Some x ->
+      Some {
+        filename = Sys.executable_name;
+        cmi = read_cmi unit_name x;
+      }
+    | _ -> old_loader ~unit_name
   in
   load := new_load
 
