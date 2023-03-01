@@ -69,7 +69,7 @@ let query_type worker (source : string) position =
 
 let init worker cmis =
   let open Fut.Syntax in
-  let action = Protocol.Init_cmis cmis in
+  let action = Protocol.Add_cmis cmis in
   let+ data : Protocol.answer = query ~action worker in
   Console.(log ["Received response from initialization:";  data]);
   match data with

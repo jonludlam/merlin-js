@@ -62,7 +62,6 @@ let read_cmi filename str =
 let memoize f =
   let memo = Hashtbl.create 10 in
   fun x ->
-    let open Js_of_ocaml in
     match Hashtbl.find_opt memo x with
     | Some x -> x
     | None ->
@@ -273,12 +272,11 @@ let on_message marshaled_message =
           })
         in
         Protocol.Errors errors
-    | Init_cmis cmis ->
-	init cmis	
+    | Add_cmis cmis ->
+      init cmis
   in
   let res = Marshal.to_bytes res [] in
   Js_of_ocaml.Worker.post_message res
-
 
 let run () =
   Js_of_ocaml.Worker.set_onmessage on_message

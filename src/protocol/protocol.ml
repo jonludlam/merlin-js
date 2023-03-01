@@ -12,7 +12,7 @@ type action =
   | Complete_prefix of source * Msource.position
   | Type_enclosing of source * Msource.position
   | All_errors of source
-  | Init_cmis of cmis
+  | Add_cmis of cmis
 
 type error = {
   kind : Location.report_kind;
