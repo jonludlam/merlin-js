@@ -69,7 +69,7 @@ let memoize f =
       Hashtbl.replace memo x result;
       result
 
-let init cmi_urls =
+let _init cmi_urls =
   let cmi_files =
     List.map
       ~f:(fun cmi -> (Filename.basename cmi |> Filename.chop_extension, cmi))
@@ -93,11 +93,28 @@ let init cmi_urls =
   in
   load := new_load
 
-let init { Protocol.static_cmis; cmi_urls } =
-  List.iter static_cmis ~f:(fun ( path, content) ->
+let init { Protocol.static_cmis=_; cmi_urls=_ } =
+  (* List.iter static_cmis ~f:(fun ( path, content) ->
     let name = Filename.(concat "/static/stdlib" (basename path)) in
     Js_of_ocaml.Sys_js.create_file ~name ~content);
-  init cmi_urls;
+  init cmi_urls; *)
+  Js_of_ocaml.(Firebug.console##log (Js.string "Initialisation 2"));
+
+  Js_of_ocaml.Sys_js.mount ~path:"/stdlib" (fun ~prefix:_ ~path ->
+    Js_of_ocaml.(Firebug.console##log (Js.string "Initialisation 3"));
+    let f = Filename.basename path in
+    sync_get ("/stdlib/" ^ f)
+    );
+  Js_of_ocaml.(Firebug.console##log (Js.string (String.concat ~sep:"," (Sys_js.mount_point ()))));
+  let test = open_in "/stdlib/stdlib.cmi" in
+  let _x = input_line test in
+  close_in test;
+  let test = open_in "/stdlib/stdlib__List.cmi" in
+  let x = input_line test in
+  close_in test;
+
+  Js_of_ocaml.(Firebug.console##log (Js.string ("read"^x)));
+
   Protocol.Initialized
 
 
@@ -105,7 +122,7 @@ let config =
   let initial = Mconfig.initial in
   { initial with
     merlin = { initial.merlin with
-      stdlib = Some "/static/stdlib" }}
+      stdlib = Some "/stdlib" }}
 
 let make_pipeline source =
   Mpipeline.make config source
@@ -279,4 +296,6 @@ let on_message marshaled_message =
   Js_of_ocaml.Worker.post_message res
 
 let run () =
+  Js_of_ocaml.(Firebug.console##log (Js.string "Hello, world"));
+
   Js_of_ocaml.Worker.set_onmessage on_message
