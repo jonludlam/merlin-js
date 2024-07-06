@@ -4,20 +4,10 @@
  (promote)
  (modules App)
  (libraries
-  merlin_client
+  js_top_worker-client_fut
   code-mirror
   merlin-js.code-mirror
   merlin-js.worker.static))
-
-(executable
- (name dynamic)
- (modes js)
- (promote)
- (modules Dynamic)
- (libraries
-  merlin_client
-  code-mirror
-  merlin-js.code-mirror))
 
 (copy_files
  (mode promote)
@@ -25,7 +15,4 @@
 
 (alias
  (name all-js)
- (deps
-   merlin_worker.bc.js
-   app.bc.js
-   dynamic.bc.js))
+ (deps merlin_worker.bc.js app.bc.js dynamic.bc.js))

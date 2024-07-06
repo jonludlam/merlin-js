@@ -48,34 +48,34 @@ type action =
 
 type error = {
   kind : Location.report_kind;
-  loc: Location.t;
+  loc : Location.t;
   main : string;
   sub : string list;
   source : Location.error_source;
 }
 
 type completions = {
-  from: int;
-  to_: int;
-  entries : Query_protocol.Compl.entry list
+  from : int;
+  to_ : int;
+  entries : Query_protocol.Compl.entry list;
 }
 
-type is_tail_position =
-  [`No | `Tail_position | `Tail_call]
+type is_tail_position = [ `No | `Tail_position | `Tail_call ]
 
 (* type errors = { from: int; to_: int; entries: error list } *)
 type answer =
- | Errors of error list
- | Completions of completions
- | Typed_enclosings of
-    (Location.t * [ `Index of int | `String of string ] * is_tail_position) list
- | Added_cmis
+  | Errors of error list
+  | Completions of completions
+  | Typed_enclosings of
+      (Location.t * [ `Index of int | `String of string ] * is_tail_position)
+      list
+  | Added_cmis
 
 let report_source_to_string = function
-  | Location.Lexer   -> "lexer"
-  | Location.Parser  -> "parser"
-  | Location.Typer   -> "typer"
+  | Location.Lexer -> "lexer"
+  | Location.Parser -> "parser"
+  | Location.Typer -> "typer"
   | Location.Warning -> "warning" (* todo incorrect ?*)
   | Location.Unknown -> "unknown"
-  | Location.Env     -> "env"
-  | Location.Config  -> "config"
+  | Location.Env -> "env"
+  | Location.Config -> "config"

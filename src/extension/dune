@@ -3,7 +3,7 @@
  (public_name merlin-js.code-mirror)
  (libraries
   brr
-  merlin_client
+  js_top_worker-client_fut
   code-mirror
   code-mirror.lint
   code-mirror.autocomplete
