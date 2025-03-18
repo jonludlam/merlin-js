@@ -14,7 +14,7 @@ let sync_get url =
       Js.Opt.case
         (File.CoerceTo.arrayBuffer x##.response)
         (fun () ->
-          Firebug.console##log (Js.string "Failed to receive file");
+          Js_of_ocaml.Console.console##log (Js.string "Failed to receive file");
           None)
         (fun b -> Some (Typed_array.String.of_arrayBuffer b))
   | _ -> None
