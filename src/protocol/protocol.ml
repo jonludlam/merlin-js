@@ -10,19 +10,19 @@ type source = string
     example, for the OCaml standard library, a user might pass:
 
     {[
-      { dcs_url="/static/stdlib";
-        dcs_toplevel_modules=["Stdlib"];
-        dcs_file_prefixes=["stdlib__"]; }
+      {
+        dcs_url = "/static/stdlib";
+        dcs_toplevel_modules = [ "Stdlib" ];
+        dcs_file_prefixes = [ "stdlib__" ];
+      }
     ]}
 
-    In which case, merlin will expect to be able to download a valid file
-    from the url ["/static/stdlib/stdlib.cmi"] corresponding to the
-    specified toplevel module, and it will also attempt to download any
-    module with the prefix ["Stdlib__"] from the same base url, so for
-    example if an attempt is made to look up the module ["Stdlib__Foo"]
-    then merlin-js will attempt to download a file from the url
-    ["/static/stdlib/stdlib__Foo.cmi"].
-    *)
+    In which case, merlin will expect to be able to download a valid file from
+    the url ["/static/stdlib/stdlib.cmi"] corresponding to the specified
+    toplevel module, and it will also attempt to download any module with the
+    prefix ["Stdlib__"] from the same base url, so for example if an attempt is
+    made to look up the module ["Stdlib__Foo"] then merlin-js will attempt to
+    download a file from the url ["/static/stdlib/stdlib__Foo.cmi"]. *)
 
 type dynamic_cmis = {
   dcs_url : string;

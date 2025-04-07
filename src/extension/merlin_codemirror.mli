@@ -12,9 +12,8 @@ module type Config = sig
 
   val cmis : Js_top_worker_rpc.Toplevel_api_gen.cmis
   (** CMIs are required for merlin to work correctly. These can either be
-      provided statically or provided as a list of URLs from which the
-      CMIs can be downloaded. If using URLs, these will only be
-      downloaded on demand. *)
+      provided statically or provided as a list of URLs from which the CMIs can
+      be downloaded. If using URLs, these will only be downloaded on demand. *)
 end
 
 val autocomplete : Js_top_worker_client_fut.rpc -> Code_mirror.Extension.t

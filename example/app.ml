@@ -11,8 +11,11 @@ let initialise s callback =
   let rpc = Js_top_worker_client_fut.start s 100000 callback in
   let* () =
     Js_top_worker_client_fut.W.init rpc
-      { Js_top_worker_rpc.Toplevel_api_gen.path = "/static/cmis";
-      cmas = []; cmis }
+      {
+        Js_top_worker_rpc.Toplevel_api_gen.path = "/static/cmis";
+        cmas = [];
+        cmis;
+      }
   in
   Fut.return (Ok rpc)
 

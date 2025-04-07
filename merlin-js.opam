@@ -20,9 +20,6 @@ depends: [
   "ppx_blob" {>= "0.7.2"}
   "code-mirror"
 ]
-pin-depends: [
-  ["code-mirror.dev" "git+https://github.com/patricoferris/jsoo-code-mirror#8fe48910e265ff87f9fc94ceb7b3d19fac102a96"]
-]
 synopsis:
   "Editor helper, provides completion, typing and source browsing for the web"
 description:
