@@ -3,10 +3,10 @@ open Brr
 module Utils = Utils
 open Js_top_worker_rpc
 
-let linter rpc view =
+let linter rpc id deps is_toplevel view =
   let open Fut.Syntax in
   let doc = Utils.get_full_doc @@ View.EditorView.state view in
-  let+ result = Js_top_worker_client_fut.W.query_errors rpc doc in
+  let+ result = Js_top_worker_client_fut.W.query_errors rpc id deps is_toplevel doc in
   match result with
   | Ok r ->
       List.map
@@ -86,14 +86,14 @@ let keywords =
       "when";
     ]
 
-let linter rpc = Lint.create (linter rpc)
+let linter rpc id deps is_toplevel = Lint.create (linter rpc id deps is_toplevel)
 
-let merlin_completion rpc ctx =
+let merlin_completion rpc id deps ctx =
   let open Fut.Syntax in
   let source = Utils.get_full_doc @@ Autocomplete.Context.state ctx in
   let pos = Autocomplete.Context.pos ctx in
   let+ res =
-    Js_top_worker_client_fut.W.complete_prefix rpc source (Offset pos)
+    Js_top_worker_client_fut.W.complete_prefix rpc id deps source (Offset pos)
   in
   match res with
   | Ok { from; to_; entries } ->
@@ -108,23 +108,23 @@ let merlin_completion rpc ctx =
       Some (Autocomplete.Result.create ~filter:true ~from ~to_ ~options ())
   | Error _ -> None
 
-let autocomplete worker =
+let autocomplete worker id deps =
   let override =
     [
       Autocomplete.Source.from_list keywords;
-      Autocomplete.Source.create @@ merlin_completion worker;
+      Autocomplete.Source.create @@ merlin_completion worker id deps;
     ]
   in
   let config = Autocomplete.config () ~override in
   Autocomplete.create ~config ()
 
-let tooltip_on_hover rpc =
+let tooltip_on_hover rpc id deps =
   let open Tooltip in
   hover_tooltip @@ fun ~view ~pos ~side:_ ->
   let open Fut.Syntax in
   let doc = Utils.get_full_doc @@ View.EditorView.state view in
   let pos = Toplevel_api_gen.Offset pos in
-  let+ result = Js_top_worker_client_fut.W.type_enclosing rpc doc pos in
+  let+ result = Js_top_worker_client_fut.W.type_enclosing rpc id deps doc pos in
   match result with
   | Ok ((loc, String type_, _) :: _) ->
       let create _view =

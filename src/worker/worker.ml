@@ -26,8 +26,9 @@ let reset_dirs () =
   Ocaml_utils.Directory_content_cache.clear ();
   let open Ocaml_utils.Load_path in
   let dirs = get_paths () in
+  let dirs = dirs.visible @ dirs.hidden in
   reset ();
-  List.iter ~f:(fun p -> prepend_dir (Dir.create p)) dirs
+  List.iter ~f:(fun p -> prepend_dir (Dir.create ~hidden:false p)) dirs
 
 let add_dynamic_cmis dcs =
   let open Ocaml_typing.Persistent_env.Persistent_signature in
@@ -48,7 +49,7 @@ let add_dynamic_cmis dcs =
       | None -> ())
     dcs.dcs_toplevel_modules;
 
-  let new_load ~unit_name =
+  let new_load ~allow_hidden ~unit_name =
     let filename = filename_of_module unit_name in
     let fs_name = Filename.(concat "/static/stdlib" filename) in
     (* Check if it's already been downloaded. This will be the
@@ -69,7 +70,7 @@ let add_dynamic_cmis dcs =
        | None ->
            Printf.eprintf "Warning: Expected to find cmi at: %s\n%!"
              (Filename.concat dcs.Protocol.dcs_url filename));
-    old_loader ~unit_name
+    old_loader ~unit_name ~allow_hidden
   in
   load := new_load
 
