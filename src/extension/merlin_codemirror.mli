@@ -16,10 +16,10 @@ module type Config = sig
       be downloaded. If using URLs, these will only be downloaded on demand. *)
 end
 
-val autocomplete : Js_top_worker_client_fut.rpc -> string option -> string list -> Code_mirror.Extension.t
+val autocomplete : Js_top_worker_client_fut.rpc -> string option -> string list -> bool -> Code_mirror.Extension.t
 (** An extension providing completions when typing *)
 
-val tooltip_on_hover : Js_top_worker_client_fut.rpc -> string option -> string list -> Code_mirror.Extension.t
+val tooltip_on_hover : Js_top_worker_client_fut.rpc -> string option -> string list -> bool -> Code_mirror.Extension.t
 (** An extension providing type-information when hovering code *)
 
 val linter : Js_top_worker_client_fut.rpc -> string option -> string list -> bool -> Code_mirror.Extension.t
