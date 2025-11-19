@@ -50,7 +50,8 @@ let add_dynamic_cmis dcs =
       | None -> ()) dcs.dcs_toplevel_modules;
 
     let new_load ~allow_hidden ~unit_name =
-      let filename = filename_of_module unit_name in
+      let unit_name_s = Ocaml_typing.Compilation_unit.Name.to_string unit_name in
+      let filename = filename_of_module unit_name_s in
       let fs_name = Filename.(concat stdlib_path filename) in
       (* Check if it's already been downloaded. This will be the
          case for all toplevel cmis. Also check whether we're supposed
@@ -82,17 +83,23 @@ let add_dynamic_cmis dcs =
     Option.iter ~f:add_dynamic_cmis dynamic_cmis;
     Protocol.Added_cmis
 
-let config =
+let base_config =
   let initial = Mconfig.initial in
   { initial with
     merlin = { initial.merlin with
       stdlib = Some stdlib_path }}
 
-let make_pipeline source =
+let make_config ?filename () =
+  match filename with
+  | None -> base_config
+  | Some fname -> { base_config with query = { base_config.query with filename = fname } }
+
+let make_pipeline ?filename source =
+  let config = make_config ?filename () in
   Mpipeline.make config source
 
-let dispatch source query  =
-  let pipeline = make_pipeline source in
+let dispatch ?filename source query  =
+  let pipeline = make_pipeline ?filename source in
   Mpipeline.with_pipeline pipeline @@ fun () -> (
     Query_commands.dispatch pipeline query
   )
@@ -182,7 +189,7 @@ module Completion = struct
         reconstructed_prefix
 
 
-  let at_pos source position =
+  let at_pos ?filename source position =
     let prefix = prefix_of_position source position in
     let `Offset to_ = Msource.get_offset source position in
     let from =
@@ -193,7 +200,7 @@ module Completion = struct
     else
       let query = Query_protocol.Complete_prefix (prefix, position, [], true, true)
       in
-      Some (from, to_, dispatch source query)
+      Some (from, to_, dispatch ?filename source query)
 end
 (*
 let dump () =
@@ -207,20 +214,20 @@ let dump () =
     |> Json.pretty_to_string *)
 
 let on_message = function
-  | Protocol.Complete_prefix (source, position) ->
+  | Protocol.Complete_prefix (source, position, filename) ->
     let source = Msource.make source in
-    begin match Completion.at_pos source position with
+    begin match Completion.at_pos ?filename source position with
     | Some (from, to_, compl) ->
       let entries = compl.entries in
       Protocol.Completions { from; to_; entries; }
     | None ->
       Protocol.Completions { from = 0; to_ = 0; entries = []; }
     end
-  | Type_enclosing (source, position) ->
+  | Type_enclosing (source, position, filename) ->
     let source = Msource.make source in
     let query = Query_protocol.Type_enclosing (None, position, None) in
-    Protocol.Typed_enclosings (dispatch source query)
-  | Protocol.All_errors source ->
+    Protocol.Typed_enclosings (dispatch ?filename source query)
+  | Protocol.All_errors (source, filename) ->
     let source = Msource.make source in
     let query = Query_protocol.Errors {
         lexing = true;
@@ -229,7 +236,7 @@ let on_message = function
       }
     in
     let errors =
-      dispatch source query
+      dispatch ?filename source query
       |> List.map ~f:(fun (Location.{kind; sub; source; _} as error) ->
         let of_sub sub =
             Location.print_sub_msg Format.str_formatter sub;
